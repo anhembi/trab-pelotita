@@ -16,7 +16,6 @@ import javax.swing.SwingUtilities;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.jogamp.opengl.util.gl2.GLUT;
 
-
 @SuppressWarnings("serial")
 public class Pelolita extends GLCanvas implements GLEventListener, KeyListener{
 
@@ -30,8 +29,8 @@ public class Pelolita extends GLCanvas implements GLEventListener, KeyListener{
 
 	// Define constants for the top-level container
 	private static String TITULO = "Modelo 3D";
-	private static final int CANVAS_LARGURA = 1024; // largura do drawable
-	private static final int CANVAS_ALTURA = 768; // altura do drawable
+	private static final int CANVAS_LARGURA = 960; // largura do drawable
+	private static final int CANVAS_ALTURA = 540; // altura do drawable
 	private static final int FPS = 60; // define frames per second para a animacao
 
 	public static void main(String[] args) {
@@ -43,6 +42,8 @@ public class Pelolita extends GLCanvas implements GLEventListener, KeyListener{
 				canvas.setPreferredSize(new Dimension(CANVAS_LARGURA, CANVAS_ALTURA));
 				final FPSAnimator animator = new FPSAnimator(canvas, FPS, true);
 				final JFrame frame = new JFrame(); 
+				
+				//Fullscreen
 				//frame.setUndecorated(true);
 				//frame.setExtendedState(Frame.MAXIMIZED_BOTH);
 				
@@ -132,9 +133,16 @@ public class Pelolita extends GLCanvas implements GLEventListener, KeyListener{
 		//Redefine a matriz atual com a matriz "identidade"
 		gl.glLoadIdentity();
 
-		// criar a cena aqui....	
+		//
+		if(score == 200) {
+			states = 2;
+		}
 		
 		switch(states){ 
+		
+		case -1: //pause
+			
+			break;
 		
 		case 0: //tela menu
 			showMenu();
@@ -145,28 +153,47 @@ public class Pelolita extends GLCanvas implements GLEventListener, KeyListener{
 			drawBall();
 			base();
 			movimentBall();
+			scoreBoard();
 			break;
 		
 		case 2: //tela jogo fase 2
-
+			drawBall();
+			base();
+			movimentBall();
+			scoreBoard();
+			rectangularBarrier();
 			break;
-
+		
+		case 3: // tela creditos
+			
+			break;
+			
+		case 4: // tela
+			break;
 		}
 		
 		// Executa os comandos OpenGL
 		gl.glFlush();
 	}
+	
+	int score = 0;
 
-	float ballX = 0, ballY = 0;
+	//float ballX = -80, ballY = 0;
+	float ballX = -40, ballY = -40;
 	float xSpeed = 1.2f, ySpeed = 1.2f;
-	float desvio = 0.1f;
+	float deviation = 0.15f;
 	float sizeBall = 4;
 	
 	float ballXMin = xMin+sizeBall, ballXMax = xMax-sizeBall;
 	float ballYMin = yMin+sizeBall, ballYMax = yMax-sizeBall;
 	float baseX = 0;
 	
+	float adjust = xSpeed;
+	
 	int states = 0;
+	int lastState = 0;
+	
+	
 	
 	public void base() {
 		//
@@ -179,53 +206,100 @@ public class Pelolita extends GLCanvas implements GLEventListener, KeyListener{
 		gl.glVertex2f(-15,-2);
 		gl.glVertex2f(15,-2);
 		gl.glVertex2f(15,2);
-		
+		//
 		gl.glEnd();
 		//
 		gl.glPopMatrix();
 	}
 	
+	
+	
 	public void movimentBall(){
 		   // 
 		   ballX += xSpeed;
 		   ballY += ySpeed;
+		   //
+		   //System.out.println("ballX: "+ballX);
+		   System.out.println("ballY: "+ballY);
+		   System.out.println((yBarrier-hBarrier)-adjust);
+		   System.out.println((yBarrier+hBarrier)+adjust);
+		  
+		   // Obstaculo parte inferior
+		   if ( 
+				ballY >= (yBarrier-hBarrier)-adjust && //inferior
+				ballY <= (yBarrier+hBarrier)+adjust && //superior
+				ballX <= (xBarrier+wBarrier)+adjust && //esquerdo
+				ballX >= (xBarrier-wBarrier)-adjust //direito  
+			) {
+			   if (ballY >= (yBarrier-hBarrier)-adjust && ballY >= (yBarrier-hBarrier)+adjust){ 
+				   ballY += sizeBall*2;
+				   ySpeed = -ySpeed;
+				   //
+				   return;
+				   
+			   } else if  (ballY <= (yBarrier+hBarrier)+adjust && ballY <= (yBarrier+hBarrier)-adjust) {
+				   ballY -= sizeBall*2;
+				   ySpeed = -ySpeed;
+				   //
+				   return;
+			   }
+			   //System.out.println("+xwBarrier: "+(xBarrier+wBarrier));
+			   //System.out.println("-xwBarrier: "+(xBarrier-wBarrier));
+			   
+			   
+		   }
+		   
 		   // 
 		   if (ballX > ballXMax) {
 		      ballX = ballXMax;
-		      xSpeed = -xSpeed+desvio;
+		      xSpeed = -xSpeed+deviation;
 		   } else if (ballX < ballXMin) {
 		      ballX = ballXMin;
 		      xSpeed = -xSpeed;
 		   }
 		   if (ballY > ballYMax) {
-		      ballY = ballYMax+desvio;
+		      ballY = ballYMax+deviation;
 		      ySpeed = -ySpeed;
 		   } else if ( ballY < (yMin+8) && (ballX<=baseX+15 && ballX>=baseX-15)   ) {
-			  System.out.println(ballX);
-			  System.out.println(baseX);
-		      //ballY = ballYMin;
 			  ballY = yMin+sizeBall*2;
 		      ySpeed = -ySpeed;
-
-		   }else if (ballY < ballYMin) {
-
-			      //ballY = ballYMin;
-			      //ySpeed = -ySpeed;
+		      score += 20;
+		   } else if (ballY < ballYMin) {
 			   ballY = 0;
 			   ballX = 0;
 			   ySpeed = 1.2f;
 				   mensagem();
 		   }
-		   
-		   
+		   	 
+		     
 	}
 	
+	float wBarrier = 20f , hBarrier = 1.3f;
+	float xBarrier = 0f, yBarrier = 10f;
+
+	
+	public void rectangularBarrier() {
+		//
+		gl.glPushMatrix();
+		gl.glTranslatef(xBarrier, yBarrier, 0);
+		//
+		gl.glColor3f(1.0f, 0.5f, 0.0f);
+		gl.glBegin(GL2.GL_QUADS);
+		gl.glVertex2f(-1*wBarrier,hBarrier);
+		gl.glVertex2f(-1*wBarrier,-1*hBarrier);
+		gl.glVertex2f(wBarrier,-1*hBarrier);
+		gl.glVertex2f(wBarrier,hBarrier);
+		//
+		gl.glEnd();
+		//
+		gl.glPopMatrix();
+	}
 	
 	
 	public void showMenu(){
 		
 		float _x = -50f;
-		float _y = -10f;
+		float _y = 0f;
 		
 		gl.glPushMatrix();
 		gl.glColor3f(1,1,1);
@@ -244,6 +318,7 @@ public class Pelolita extends GLCanvas implements GLEventListener, KeyListener{
 	
 	float xBoxSelector = -50f;
 	float yBoxSelector = 1f;
+	int optionSelected = 0;
 	
 	public void boxSelector(){
 		//
@@ -273,6 +348,48 @@ public class Pelolita extends GLCanvas implements GLEventListener, KeyListener{
 			glut.glutSolidSphere(sizeBall, 15, 20);
 			//
 			gl.glPopMatrix();
+	}
+	
+	public void scoreBoard () {
+		gl.glPushMatrix();
+		//
+		gl.glColor3f(1,1,1);
+		gl.glRasterPos2f(0f, 0f);
+		glut.glutBitmapString(GLUT.BITMAP_HELVETICA_18, "Score: "+score);
+		//
+		gl.glPopMatrix();
+	}
+	
+	public void health (){
+		gl.glLineWidth(2);
+		gl.glColor3f(1.0f, 0.5f, 0.0f);
+		gl.glBegin(GL2.GL_LINE);
+		gl.glVertex2f(-2.5f,2.5f);
+		gl.glEnd();
+	}
+	
+	int health = 5;
+	
+	public void showHealth(){
+		gl.glPushMatrix();
+		for(int i = 1; i <=5; i++ ){
+			gl.glPushMatrix();
+			gl.glTranslatef(-95f+(5*i), -50f, 0);
+			health();
+			gl.glPopMatrix();
+		}
+		gl.glPopMatrix();
+	}
+
+	
+	public void credits () {
+		gl.glPushMatrix();
+		//
+		gl.glColor3f(1,1,1);
+		gl.glRasterPos2f(0f, 0f);
+		glut.glutBitmapString(GLUT.BITMAP_HELVETICA_18, "Score: ");
+		//
+		gl.glPopMatrix();
 	}
 	
 	public void mensagem(){
@@ -312,12 +429,38 @@ public class Pelolita extends GLCanvas implements GLEventListener, KeyListener{
 				break;
 				
 			case KeyEvent.VK_UP:
-				yBoxSelector += 10;
+				if(optionSelected > 0) { 
+					yBoxSelector += 10;
+					optionSelected --;
+				}
 				break;
 			
 			case KeyEvent.VK_DOWN:
-				yBoxSelector -= 10;
+				if(optionSelected < 2 ) {
+					yBoxSelector -= 10;
+					optionSelected ++;
+				}
 				break;
+				
+			case KeyEvent.VK_ENTER:
+				switch (optionSelected) {
+				case 0:
+					states = 1;
+					break;
+				}
+				
+				break;
+				
+			case KeyEvent.VK_P:
+				
+				if(states != -1) {
+					lastState = states;
+					states = -1;
+				} else if (states == -1) {
+					states = lastState;
+				}
+				break;
+				
 		}
 		
 	}
